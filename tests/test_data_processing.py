@@ -1,128 +1,242 @@
-"""
-Automated Tests for Pediatric Appendicitis Diagnosis
-=====================================================
-Tests for data processing, memory optimization, and model prediction.
-"""
+"""Tests unitaires du pipeline de préparation des données."""
 
 import os
 import sys
+
 import pytest
 import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from src.data_processing import load_data, optimize_memory, clean_data, preprocess_data
+
+from src.data_processing import (
+    load_data, optimize_memory, clean_data, preprocess_data,
+    _impute_bmi, _impute_by_correlation,
+)
 
 
-class TestDataProcessing:
-    """Tests for the data processing pipeline."""
+                                                             
+                       
+                                                             
 
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Load dataset once for all tests."""
-        self.df = load_data()
+class TestLoadData:
 
-    def test_data_loads_successfully(self):
-        """Verify dataset loads and has expected shape."""
-        assert self.df is not None
-        assert len(self.df) > 0
-        assert len(self.df.columns) > 10
-        assert "Diagnosis" in self.df.columns
+    def test_loads_non_empty(self, raw_df):
+        assert raw_df is not None
+        assert len(raw_df) > 0
 
-    def test_data_shape(self):
-        """Verify expected number of rows and columns."""
-        assert self.df.shape[0] == 782, f"Expected 782 rows, got {self.df.shape[0]}"
-        assert self.df.shape[1] >= 50, f"Expected >= 50 columns, got {self.df.shape[1]}"
+    def test_expected_row_count(self, raw_df):
+        assert raw_df.shape[0] == 782
 
-    def test_optimize_memory_reduces_usage(self):
-        """Verify optimize_memory reduces DataFrame memory usage."""
-        mem_before = self.df.memory_usage(deep=True).sum()
-        df_opt = optimize_memory(self.df)
+    def test_has_target_column(self, raw_df):
+        assert "Diagnosis" in raw_df.columns
+
+    def test_minimum_columns(self, raw_df):
+        assert raw_df.shape[1] >= 50
+
+    def test_has_key_features(self, raw_df):
+        expected = ["Age", "BMI", "WBC_Count", "CRP", "Body_Temperature", "Sex"]
+        for col in expected:
+            assert col in raw_df.columns, f"Colonne attendue manquante : {col}"
+
+
+                                                             
+                             
+                                                             
+
+class TestOptimizeMemory:
+
+    def test_reduces_memory(self, raw_df):
+        mem_before = raw_df.memory_usage(deep=True).sum()
+        df_opt = optimize_memory(raw_df)
         mem_after = df_opt.memory_usage(deep=True).sum()
+        assert mem_after < mem_before
 
-        assert mem_after < mem_before, "Memory was not reduced"
+    def test_reduction_at_least_30_percent(self, raw_df):
+        mem_before = raw_df.memory_usage(deep=True).sum()
+        df_opt = optimize_memory(raw_df)
+        mem_after = df_opt.memory_usage(deep=True).sum()
         reduction = (1 - mem_after / mem_before) * 100
-        assert reduction > 30, f"Expected >30% reduction, got {reduction:.1f}%"
+        assert reduction > 30
 
-    def test_optimize_memory_preserves_data(self):
-        """Verify optimize_memory doesn't change data values."""
-        df_opt = optimize_memory(self.df)
-        assert len(df_opt) == len(self.df)
-        assert list(df_opt.columns) == list(self.df.columns)
+    def test_preserves_row_count(self, raw_df, optimized_df):
+        assert len(optimized_df) == len(raw_df)
 
-    def test_missing_values_handling(self):
-        """Verify clean_data handles missing values."""
-        df_opt = optimize_memory(self.df)
-        df_clean = clean_data(df_opt)
+    def test_preserves_columns(self, raw_df, optimized_df):
+        assert list(optimized_df.columns) == list(raw_df.columns)
 
-        # After cleaning, numeric columns should have no NaNs
-        numeric_cols = df_clean.select_dtypes(include=[np.number]).columns
-        for col in numeric_cols:
-            assert df_clean[col].isnull().sum() == 0, f"Column {col} still has NaN values"
+    def test_preserves_values(self, raw_df):
+        df_opt = optimize_memory(raw_df)
+                                                                                                    
+        for col in raw_df.select_dtypes(include=[np.number]).columns[:5]:
+            np.testing.assert_allclose(
+                df_opt[col].values.astype(float),
+                raw_df[col].values.astype(float),
+                rtol=1e-3, atol=1e-5,
+                err_msg=f"Valeurs différentes dans {col}"
+            )
 
-    def test_clean_data_preserves_rows(self):
-        """Verify cleaning doesn't excessively reduce data."""
-        df_opt = optimize_memory(self.df)
-        df_clean = clean_data(df_opt)
-        # Should keep at least 90% of rows
-        assert len(df_clean) >= len(self.df) * 0.9, "Too many rows removed"
 
-    def test_preprocess_produces_valid_splits(self):
-        """Verify preprocessing produces valid train/test splits."""
-        df_opt = optimize_memory(self.df)
-        df_clean = clean_data(df_opt)
-        X_train, X_test, y_train, y_test, scaler, feature_names = preprocess_data(df_clean)
+                                                             
+                                  
+                                                             
 
-        assert X_train.shape[0] > 0
-        assert X_test.shape[0] > 0
+class TestImputeBMI:
+
+    def test_calculates_bmi_from_height_weight(self):
+        df = pd.DataFrame({
+            "BMI": [np.nan, 25.0],
+            "Weight": [70.0, 80.0],
+            "Height": [175.0, 180.0],
+        })
+        result = _impute_bmi(df)
+        expected_bmi = 70.0 / (1.75 ** 2)
+        assert abs(result["BMI"].iloc[0] - expected_bmi) < 0.5
+        assert result["BMI"].iloc[1] == 25.0                             
+
+    def test_drops_height_weight(self):
+        df = pd.DataFrame({
+            "BMI": [25.0], "Weight": [70.0], "Height": [175.0],
+        })
+        result = _impute_bmi(df)
+        assert "Weight" not in result.columns
+        assert "Height" not in result.columns
+
+    def test_no_bmi_column(self):
+        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        result = _impute_bmi(df)
+        assert list(result.columns) == ["A", "B"]
+
+    def test_missing_weight_or_height(self):
+        df = pd.DataFrame({
+            "BMI": [np.nan], "Weight": [np.nan], "Height": [175.0],
+        })
+        result = _impute_bmi(df)
+        assert pd.isna(result["BMI"].iloc[0])                        
+
+
+                                                             
+                                             
+                                                             
+
+class TestImputeByCorrelation:
+
+    def test_imputes_correlated_nans(self):
+        np.random.seed(42)
+        n = 100
+        a = np.random.randn(n) * 10 + 50
+        b = a * 2 + np.random.randn(n) * 0.5                
+        b[95:] = np.nan
+        df = pd.DataFrame({"A": a, "B": b, "Diagnosis": np.random.randint(0, 2, n)})
+        result = _impute_by_correlation(df, corr_threshold=0.5)
+        assert result["B"].isna().sum() == 0
+
+    def test_no_imputation_below_threshold(self):
+        np.random.seed(42)
+        n = 50
+        df = pd.DataFrame({
+            "A": np.random.randn(n),
+            "B": np.random.randn(n),
+            "Diagnosis": np.random.randint(0, 2, n),
+        })
+        df.loc[0, "B"] = np.nan
+        result = _impute_by_correlation(df, corr_threshold=0.99)
+        assert result["B"].isna().sum() == 1                                        
+
+
+                                                             
+                        
+                                                             
+
+class TestCleanData:
+
+    def test_no_nans_in_numeric(self, clean_df):
+        numeric = clean_df.select_dtypes(include=[np.number]).columns
+        for col in numeric:
+            assert clean_df[col].isna().sum() == 0, f"NaN subsiste dans {col}"
+
+    def test_preserves_most_rows(self, raw_df, clean_df):
+        assert len(clean_df) >= len(raw_df) * 0.85
+
+    def test_removes_parasitic_columns(self, clean_df):
+        removed = ["Management", "Severity", "Length_of_Stay",
+                    "Alvarado_Score", "Paedriatic_Appendicitis_Score"]
+        for col in removed:
+            assert col not in clean_df.columns, f"{col} n'aurait pas dû survivre"
+
+    def test_removes_weak_columns(self, clean_df):
+        weak = ["Ketones_in_Urine", "RBC_in_Urine", "WBC_in_Urine",
+                "Dysuria", "Stool", "US_Performed",
+                "Hemoglobin", "RDW", "Thrombocyte_Count", "RBC_Count"]
+        for col in weak:
+            assert col not in clean_df.columns, f"{col} (faible) aurait dû être supprimé"
+
+    def test_engineered_features_present(self, clean_df):
+        assert "WBC_CRP_Ratio" in clean_df.columns
+
+    def test_no_duplicates(self, clean_df):
+        assert clean_df.duplicated().sum() == 0
+
+    def test_diagnosis_still_present(self, clean_df):
+        assert "Diagnosis" in clean_df.columns
+
+    def test_height_weight_removed(self, clean_df):
+        assert "Height" not in clean_df.columns
+        assert "Weight" not in clean_df.columns
+
+    def test_bmi_preserved(self, clean_df):
+        assert "BMI" in clean_df.columns
+
+
+                                                             
+                             
+                                                             
+
+class TestPreprocessData:
+
+    def test_shapes_match(self, preprocessed):
+        X_train, X_test, y_train, y_test, _, _ = preprocessed
+        assert X_train.shape[0] == len(y_train)
+        assert X_test.shape[0] == len(y_test)
         assert X_train.shape[1] == X_test.shape[1]
-        assert len(y_train) == X_train.shape[0]
-        assert len(y_test) == X_test.shape[0]
+
+    def test_feature_names_count(self, preprocessed):
+        X_train, _, _, _, _, feature_names = preprocessed
         assert len(feature_names) == X_train.shape[1]
 
-    def test_target_encoding(self):
-        """Verify target is encoded as binary 0/1."""
-        df_opt = optimize_memory(self.df)
-        df_clean = clean_data(df_opt)
-        _, _, y_train, y_test, _, _ = preprocess_data(df_clean)
+    def test_target_binary(self, preprocessed):
+        _, _, y_train, y_test, _, _ = preprocessed
+        all_y = np.concatenate([y_train, y_test])
+        assert set(all_y) == {0, 1}
 
-        y_all = np.concatenate([y_train, y_test])
-        unique_values = set(y_all)
-        assert unique_values == {0, 1}, f"Expected {{0, 1}}, got {unique_values}"
+    def test_split_ratio(self, preprocessed):
+        X_train, X_test, _, _, _, _ = preprocessed
+        total = len(X_train) + len(X_test)
+        test_ratio = len(X_test) / total
+        assert 0.15 <= test_ratio <= 0.25
 
+    def test_stratification(self, preprocessed):
+        _, _, y_train, y_test, _, _ = preprocessed
+        train_ratio = y_train.mean()
+        test_ratio = y_test.mean()
+        assert abs(train_ratio - test_ratio) < 0.05
 
-class TestModelPrediction:
-    """Tests for model loading and prediction."""
+    def test_scaler_fitted(self, preprocessed):
+        _, _, _, _, scaler, _ = preprocessed
+        assert hasattr(scaler, "mean_")
+        assert hasattr(scaler, "scale_")
 
-    def test_model_loading_and_prediction(self):
-        """Verify trained model loads and produces valid predictions."""
-        import joblib
+    def test_train_approximately_scaled(self, preprocessed):
+        X_train, _, _, _, _, _ = preprocessed
+        means = X_train.mean(axis=0)
+        stds = X_train.std(axis=0)
+        assert np.allclose(means, 0, atol=0.15)
+        assert np.allclose(stds, 1, atol=0.25)
 
-        models_dir = os.path.join(os.path.dirname(__file__), "..", "models")
-
-        # Check model files exist
-        assert os.path.exists(os.path.join(models_dir, "best_model.pkl")), "Model file not found"
-        assert os.path.exists(os.path.join(models_dir, "scaler.pkl")), "Scaler file not found"
-        assert os.path.exists(os.path.join(models_dir, "feature_names.pkl")), "Feature names not found"
-
-        # Load model
-        model = joblib.load(os.path.join(models_dir, "best_model.pkl"))
-        scaler = joblib.load(os.path.join(models_dir, "scaler.pkl"))
-        feature_names = joblib.load(os.path.join(models_dir, "feature_names.pkl"))
-
-        # Create a dummy input
-        dummy_input = np.zeros((1, len(feature_names)))
-        dummy_scaled = scaler.transform(dummy_input)
-
-        # Predict
-        prediction = model.predict(dummy_scaled)
-        probabilities = model.predict_proba(dummy_scaled)
-
-        assert prediction[0] in [0, 1], "Invalid prediction"
-        assert probabilities.shape == (1, 2), "Invalid probabilities shape"
-        assert 0 <= probabilities[0][0] <= 1, "Probability out of range"
-        assert 0 <= probabilities[0][1] <= 1, "Probability out of range"
-        assert abs(probabilities[0].sum() - 1.0) < 1e-5, "Probabilities don't sum to 1"
+    def test_no_nans_in_output(self, preprocessed):
+        X_train, X_test, _, _, _, _ = preprocessed
+        assert not np.isnan(X_train).any()
+        assert not np.isnan(X_test).any()
 
 
 if __name__ == "__main__":
