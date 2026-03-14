@@ -2,10 +2,10 @@
 
 **Explainable machine-learning clinical decision support for pediatric appendicitis diagnosis**
 
-[![CI Pipeline](https://github.com/YOUR_REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_REPO/actions)
+[![CI Pipeline](https://github.com/Mavens06/Coding-week-project/actions/workflows/ci.yml/badge.svg)](https://github.com/Mavens06/Coding-week-project/actions)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
-![Version](https://img.shields.io/badge/version-1.0.6-orange.svg)
+![Version](https://img.shields.io/badge/version-1.1.2-orange.svg)
 
 ---
 
@@ -315,9 +315,17 @@ Coding-week-project/
 |   |-- shap_utils.py                    # SHAP explainer init + per-prediction SHAP value computation
 |   |-- history.db                       # SQLite database (users + prediction history)
 |   |-- static/
-|   |   |-- css/style.css                # Full CSS: dark mode, glassmorphism, responsive, animations
-|   |   |-- js/main.js                   # UI: slide navigation, form wizard, SHAP bar animation, filters
-|   |   `-- img/                         # Hero image, anatomical SVG illustration
+|   |   |-- css/style.css                # Global UI styles (landing, form, results, admin)
+|   |   |-- img/
+|   |   |   |-- anatomy-body.jpg
+|   |   |   `-- appendix-anatomy.svg
+|   |   `-- js/
+|   |       |-- common.js                # Global UI (navbar, animations, flash)
+|   |       |-- landing.js               # Landing page slides + stats + particles
+|   |       |-- diagnosis.js             # Multi-step form wizard + validation + BMI/Age
+|   |       |-- result.js                # Result ring + SHAP bars animations
+|   |       |-- history.js               # History filtering + delete/clear actions
+|   |       `-- admin.js                 # Admin toggle/delete actions
 |   `-- templates/
 |       |-- base.html                    # Base layout (navbar, footer, flash messages)
 |       |-- index.html                   # Landing page: 3-slide hero, stats, features
@@ -328,6 +336,9 @@ Coding-week-project/
 |       |-- profile.html                 # User profile editing
 |       |-- history.html                 # Searchable/filterable prediction history
 |       `-- admin.html                   # Admin dashboard: user management
+|
+|-- catboost_info/
+|   `-- catboost_training.json           # CatBoost training metadata (auto-generated)
 |
 |-- data/
 |   |-- appendicitis.csv                 # Raw dataset (782 patients, 53 features)
@@ -365,7 +376,7 @@ Coding-week-project/
 |       `-- shap_beeswarm.png
 |
 |-- src/                                 # ML pipeline source code
-|   |-- __init__.py                      # Package version: "1.0.6"
+|   |-- __init__.py                      # Package version: "1.1.2"
 |   |-- config.py                        # Central config: paths, ML defaults, cleaning thresholds
 |   |-- data_processing.py               # load, optimize, clean (9 steps), preprocess
 |   |-- train_model.py                   # Train 4 models, CV, select best, save artifacts
@@ -393,7 +404,7 @@ Coding-week-project/
 
 ### Prerequisites
 
-- Python 3.11 or higher
+- Python 3.11 or higher (CI runs on Python 3.13)
 - pip
 - (Optional) a virtual environment manager (`venv`, `conda`, etc.)
 
@@ -401,7 +412,7 @@ Coding-week-project/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/YOUR_REPO/Coding-week-project.git
+git clone https://github.com/Mavens06/Coding-week-project.git
 cd Coding-week-project
 
 # 2. Create and activate a virtual environment
@@ -559,6 +570,13 @@ The **Random Forest** model was selected as the production model based on the re
 ## Web Application
 
 The Flask web application provides a clinical-grade interface:
+
+### Frontend Assets
+
+- Global JS: `app/static/js/common.js` (navbar scroll state, smooth scroll, entry animations, flash auto-dismiss)
+- Per-page JS: `landing.js`, `diagnosis.js`, `result.js`, `history.js`, `admin.js`
+- CSS: `app/static/css/style.css`
+- Template note: prefer Jinja comments `{# ... #}` for file headers / internal docs in templates (HTML comments can still be used for rendered markup, but avoid embedding Jinja tags inside them).
 
 ### Pages
 
