@@ -322,3 +322,8 @@
     </div>
 </section>
 {% endblock %}
+
+<!-- Chargement du script spécifique à la page de résultat (anneau SVG, barres SHAP) -->
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/result.js') }}"></script>
+{% endblock %}
