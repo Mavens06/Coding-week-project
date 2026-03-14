@@ -95,16 +95,16 @@
 
     <!-- ═══ Flash Messages — Messages temporaires Flask ═══ -->
     <!-- Affiche les notifications (succès, erreur, info) définies via flash() dans les routes Flask -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="flash-messages">
-        {% for category, message in messages %}
-        <!-- Chaque message a une classe CSS correspondant à sa catégorie (success, error, info, etc.) -->
-        <div class="flash-msg {{ category }}">{{ message }}</div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    {% endwith %}
+	    {% with messages = get_flashed_messages(with_categories=true) %}
+	    {% if messages %}
+	    <div class="flash-messages" role="status" aria-live="polite" aria-atomic="true">
+	        {% for category, message in messages %}
+	        <!-- Chaque message a une classe CSS correspondant à sa catégorie (success, error, info, etc.) -->
+	        <div class="flash-msg {{ category }}">{{ message }}</div>
+	        {% endfor %}
+	    </div>
+	    {% endif %}
+	    {% endwith %}
 
 	    <!-- ═══ Main Content — Contenu principal de la page ═══ -->
 	    <!-- Chaque page enfant injecte son contenu ici via le block content -->
