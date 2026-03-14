@@ -15,15 +15,17 @@
 #}
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Titre de la page — surchargeable par chaque page enfant via le block title -->
-    <title>{% block title %}PediAppend — AI-Powered Pediatric Appendicitis Diagnosis{% endblock %}</title>
-    <meta name="description" content="Système d'aide à la décision clinique pour le diagnostic pédiatrique de l'appendicite par apprentissage automatique.">
-    <!-- Feuille de style principale de l'application -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
+	<head>
+	    <meta charset="UTF-8">
+	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	    <meta name="theme-color" content="#06b6d4">
+	    <!-- Titre de la page — surchargeable par chaque page enfant via le block title -->
+	    <title>{% block title %}PediAppend — AI-Powered Pediatric Appendicitis Diagnosis{% endblock %}</title>
+	    <meta name="description" content="Système d'aide à la décision clinique pour le diagnostic pédiatrique de l'appendicite par apprentissage automatique.">
+	    <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
+	    <!-- Feuille de style principale de l'application -->
+	    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+	</head>
 <body>
     <!-- ═══ Navbar — Barre de navigation principale ═══ -->
     <!-- Contient le logo, les liens de navigation et le menu utilisateur (connecté/déconnecté) -->
