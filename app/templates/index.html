@@ -289,3 +289,8 @@
 
 </div><!-- /.slides-viewport — Fin du conteneur de slides -->
 {% endblock %}
+
+<!-- Chargement du script spécifique à la page d'accueil (slides, stats, particles) -->
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+{% endblock %}
