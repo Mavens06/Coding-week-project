@@ -98,38 +98,9 @@
 
     </div>
 </section>
+{% endblock %}
 
-<!-- ═══ Script JavaScript — Fonctions d'administration ═══ -->
-<script>
-/**
- * toggleAdmin(userId) — Bascule le rôle admin d'un utilisateur
- * Envoie une requête POST à /admin/toggle/{userId}
- * Recharge la page en cas de succès, affiche une erreur sinon
- */
-async function toggleAdmin(userId) {
-    if (!confirm('Modifier le rôle de cet utilisateur ?')) return;
-    const res = await fetch(`/admin/toggle/${userId}`, { method: 'POST' });
-    if (res.ok) location.reload();
-    else {
-        const data = await res.json();
-        alert(data.error || 'Erreur');
-    }
-}
-
-/**
- * deleteUser(userId, username) — Supprime un utilisateur et son historique
- * Envoie une requête DELETE à /admin/delete/{userId}
- * Supprime la ligne du tableau en cas de succès (sans recharger la page)
- */
-async function deleteUser(userId, username) {
-    if (!confirm(`Supprimer l'utilisateur "${username}" et tout son historique ?`)) return;
-    const res = await fetch(`/admin/delete/${userId}`, { method: 'DELETE' });
-    if (res.ok) {
-        document.getElementById(`user-row-${userId}`).remove();
-    } else {
-        const data = await res.json();
-        alert(data.error || 'Erreur');
-    }
-}
-</script>
+<!-- Chargement du script spécifique au panneau d'administration -->
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 {% endblock %}
